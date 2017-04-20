@@ -1,4 +1,3 @@
-/* gcc -o aio aio.c -lrt */
 #include <aio.h>
 #include <arpa/inet.h>
 #include <stdio.h>
