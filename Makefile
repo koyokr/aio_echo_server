@@ -1,12 +1,13 @@
 CC = gcc
 CFLAGS = -W -Wall -O2
 TARGET = aio_echo_server
-SRCS = main.c
+SOURCES = aiocb.c client.c error.c main.c
+HEADERS = aiocb.h client.h error.h
 
 all: $(TARGET)
 
-$(TARGET): $(SRCS)
-	$(CC) $(CFLAGS) -o $@ $^ -lrt
+$(TARGET): $(SOURCES) $(HEADERS)
+	$(CC) $(CFLAGS) -o $@ $(SOURCES) -lrt
 
 clean:
 	rm -f $(TARGET)
