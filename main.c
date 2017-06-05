@@ -1,4 +1,3 @@
-#include "aiocb.h"
 #include "client.h"
 #include "error.h"
 
@@ -35,18 +34,18 @@ static int open_server(int domain, int port)
 
 int main(int argc, char *argv[])
 {
+	int fd;
+	struct aiocb *cblist[2];
+
 	if (argc != 2) {
 		puts("usage: aio_echo_server <port>");
 		return 1;
 	}
 
-	int fd = open_server(AF_INET, atoi(argv[1]));
-
 	/* set */
-	struct aiocb *cblist[2] = {
-		new_aiocb(STDIN_FILENO),
-		new_aiocb(fd)
-	};
+	fd = open_server(AF_INET, atoi(argv[1]));
+	cblist[0] = new_aiocb(STDIN_FILENO);
+	cblist[1] = new_aiocb(fd);
 
 	g_fd = fd;
 

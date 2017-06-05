@@ -1,22 +1,53 @@
 #include "client.h"
-#include "aiocb.h"
 #include "error.h"
+
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 
-int g_fd;
+#define BUFLEN 1024
 
 #define M_NEW "\x1b[0;32m[*] new client\x1b[0m"
 #define M_DEL "\x1b[0;31m[*] delete client\x1b[0m"
+
+int g_fd;
+
+static void aio_completion_handler(sigval_t sigval);
+
+struct aiocb *new_aiocb(int fd)
+{
+	struct aiocb *cbp = malloc(sizeof(struct aiocb));
+
+	cbp->aio_fildes  = fd;
+	cbp->aio_offset  = 0;
+	cbp->aio_buf     = malloc(BUFLEN);
+	cbp->aio_nbytes  = BUFLEN;
+	cbp->aio_reqprio = 0;
+	cbp->aio_sigevent.sigev_notify            = SIGEV_THREAD;
+	cbp->aio_sigevent.sigev_signo             = 0;
+	cbp->aio_sigevent.sigev_value.sival_ptr   = cbp;
+	cbp->aio_sigevent.sigev_notify_function   = aio_completion_handler;
+	cbp->aio_sigevent.sigev_notify_attributes = NULL;
+	cbp->aio_sigevent.sigev_notify_thread_id  = 0;
+	cbp->aio_lio_opcode = LIO_READ;
+
+	return cbp;
+}
+
+void delete_aiocb(struct aiocb *cbp)
+{
+	free((void *)cbp->aio_buf);
+	free(cbp);
+}
 
 static int new_client(int fd)
 {
 	struct sockaddr_in sa;
 	socklen_t slen;
+	int cfd;
 
-	int cfd = accept(fd, (struct sockaddr *)&sa, &slen);
+	cfd = accept(fd, (struct sockaddr *)&sa, &slen);
 	if (cfd == -1)
 		unix_error("accept");
 	if (write(STDOUT_FILENO, M_NEW, sizeof(M_NEW)) == -1)
@@ -32,10 +63,29 @@ static void delete_client(int fd)
 		unix_error("write");
 }
 
-void aio_completion_handler(sigval_t sigval)
+static int aio_fail(struct aiocb *cbp)
 {
+	int status = aio_error(cbp);
+
+	switch (status) {
+	case 0:
+	case EINPROGRESS:
+	case ECANCELED:
+		return status;
+	default:
+		unix_error("aio_error");
+	}
+}
+
+static void aio_completion_handler(sigval_t sigval)
+{
+	int old_errno = errno;
+
 	struct aiocb *cbp = sigval.sival_ptr;
 	int fd = cbp->aio_fildes;
+
+	if (aio_fail(cbp))
+		goto end;
 
 	if (fd == g_fd) { /* new client */
 		int cfd = new_client(fd);
@@ -76,9 +126,10 @@ void aio_completion_handler(sigval_t sigval)
 		goto end;
 	}
 
-end:
-	return;
 next:
 	if (aio_read(cbp) == -1)
 		unix_error("aio_read");
+end:
+	errno = old_errno;
+	return;
 }
