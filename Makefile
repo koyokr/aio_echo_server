@@ -1,4 +1,3 @@
-CC = gcc
 CFLAGS = -W -Wall -std=c11 -O2
 TARGET = aio_echo_server
 SOURCES = client.c error.c main.c

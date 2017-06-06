@@ -44,6 +44,17 @@ void delete_aiocb(struct aiocb *cbp)
 	free(cbp);
 }
 
+static ssize_t write_wrap(int fd, char const *buf, int buflen)
+{
+	ssize_t len;
+
+	len = write(fd, buf, buflen) == -1;
+	if (len == -1)
+		unix_error("write");
+
+	return len;
+}
+
 static int new_client(int fd)
 {
 	struct sockaddr_in sa;
@@ -54,8 +65,7 @@ static int new_client(int fd)
 	if (cfd == -1)
 		unix_error("accept");
 
-	if (write(STDOUT_FILENO, M_NEW, sizeof(M_NEW)) == -1)
-		unix_error("write");
+	write_wrap(STDOUT_FILENO, M_NEW, sizeof(M_NEW));
 
 	return cfd;
 }
@@ -63,22 +73,15 @@ static int new_client(int fd)
 static void delete_client(int fd)
 {
 	close(fd);
-	if (write(STDOUT_FILENO, M_DEL, sizeof(M_DEL)) == -1)
-		unix_error("write");
+	write_wrap(STDOUT_FILENO, M_DEL, sizeof(M_DEL));
 }
 
-static void echo(int fd, char const *buf, int buflen)
-{
-	if (write(fd, buf, buflen) == -1)
-		unix_error("write");
-}
-
-static void echo_eb(char const *buf, int buflen)
+static void write_eb(char const *buf, int buflen)
 {
 	int i;
 
 	for (i = g_fdlist_index; i > -1; i--)
-		echo(g_fdlist[i], buf, buflen);
+		write_wrap(g_fdlist[i], buf, buflen);
 }
 
 static void aio_completion_handler(sigval_t sigval)
@@ -120,12 +123,11 @@ static void aio_completion_handler(sigval_t sigval)
 		buf[buflen] = '\0';
 
 		if (g_eb)
-			echo_eb(buf, buflen);
+			write_eb(buf, buflen);
 		else
-			echo(fd, buf, buflen);
+			write_wrap(fd, buf, buflen);
 
-		if (write(STDOUT_FILENO, buf, buflen) == -1)
-			unix_error("write");
+		write_wrap(STDOUT_FILENO, buf, buflen);
 
 		goto next;
 	}
