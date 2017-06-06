@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
 	struct aiocb *cblist[2];
 
 	if (argc != 2) {
-		puts("usage: aio_echo_server <port>");
+		fprintf(stderr, "usage: %s <port>\n", argv[0]);
 		return 1;
 	}
 
