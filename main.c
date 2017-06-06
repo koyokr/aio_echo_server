@@ -51,14 +51,12 @@ int main(int argc, char *argv[])
 	else
 		help(argv[0]);
 
-	/* set */
 	fd = open_server(AF_INET, atoi(argv[1]));
 	cblist[0] = new_aiocb(STDIN_FILENO);
 	cblist[1] = new_aiocb(fd);
 
 	g_fd = fd;
 
-	/* lio_listio */
 	if (lio_listio(LIO_NOWAIT, cblist, 2, NULL) == -1)
 		unix_error("lio_listio");
 
