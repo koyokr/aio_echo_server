@@ -63,32 +63,14 @@ static void delete_client(int fd)
 		unix_error("write");
 }
 
-static int aio_fail(struct aiocb *cbp)
-{
-	int status = aio_error(cbp);
-
-	switch (status) {
-	case 0:
-	case EINPROGRESS:
-	case ECANCELED:
-		break;
-	default:
-		unix_error("aio_error");
-	}
-
-	return status;
-}
-
 static void aio_completion_handler(sigval_t sigval)
 {
 	int old_errno = errno;
 	struct aiocb *cbp = sigval.sival_ptr;
 	int fd = cbp->aio_fildes;
 
-	if (aio_fail(cbp))
-		goto end;
-
-	if (fd == g_fd) { /* new client */
+	if (fd == g_fd) {
+		// new client
 		int cfd = new_client(fd);
 		struct aiocb *ccbp = new_aiocb(cfd);
 
@@ -101,15 +83,19 @@ static void aio_completion_handler(sigval_t sigval)
 	char *buf = (void *)cbp->aio_buf;
 	int buflen = aio_return(cbp);
 
-	if (fd == STDIN_FILENO) { /* stdin */
-		buf[buflen] = '\0';
+	if (fd == STDIN_FILENO) {
+		// stdin
+		if (buflen == -1)
+			unix_error("write");
 
-		if (strcmp(buf, "exit\n") == 0)
+		if (buflen == 0)
 			exit(0);
 
 		goto next;
 	}
-	else if (buflen > 0) { /* echo */
+
+	if (buflen > 0) {
+		// echo
 		buf[buflen] = '\0';
 
 		if (write(fd, buf, buflen) == -1)
@@ -120,7 +106,8 @@ static void aio_completion_handler(sigval_t sigval)
 
 		goto next;
 	}
-	else { /* delete client */
+	else {
+		// delete client
 		delete_client(fd);
 		delete_aiocb(cbp);
 

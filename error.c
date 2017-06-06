@@ -5,4 +5,5 @@
 void unix_error(char const *s)
 {
 	perror(s);
+	exit(1);
 }
