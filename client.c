@@ -48,7 +48,7 @@ static ssize_t write_wrap(int fd, char const *buf, int buflen)
 {
 	ssize_t len;
 
-	len = write(fd, buf, buflen) == -1;
+	len = write(fd, buf, buflen);
 	if (len == -1)
 		unix_error("write");
 
