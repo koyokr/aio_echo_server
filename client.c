@@ -132,11 +132,11 @@ static void aio_completion_handler(sigval_t sigval)
 	}
 	else {
 		// delete client
-		delete_client(fd);
-		delete_aiocb(cbp);
-
 		if (g_eb)
 			g_fdlist_index--;
+
+		delete_client(fd);
+		delete_aiocb(cbp);
 
 		goto end;
 	}
