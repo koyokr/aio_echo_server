@@ -1,15 +1,16 @@
 #include "client.h"
 #include "error.h"
 
-#include <string.h>
+#include <errno.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include <string.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 
 #define BUFLEN 1024
 
-#define M_NEW "\x1b[0;32m[*] new client\x1b[0m"
-#define M_DEL "\x1b[0;31m[*] delete client\x1b[0m"
+#define M_NEW "\x1b[0;32m[*] new client\x1b[0m\n"
+#define M_DEL "\x1b[0;31m[*] delete client\x1b[0m\n"
 
 int g_fd;
 
@@ -29,7 +30,6 @@ struct aiocb *new_aiocb(int fd)
 	cbp->aio_sigevent.sigev_value.sival_ptr   = cbp;
 	cbp->aio_sigevent.sigev_notify_function   = aio_completion_handler;
 	cbp->aio_sigevent.sigev_notify_attributes = NULL;
-	cbp->aio_sigevent.sigev_notify_thread_id  = 0;
 	cbp->aio_lio_opcode = LIO_READ;
 
 	return cbp;
@@ -71,16 +71,17 @@ static int aio_fail(struct aiocb *cbp)
 	case 0:
 	case EINPROGRESS:
 	case ECANCELED:
-		return status;
+		break;
 	default:
 		unix_error("aio_error");
 	}
+
+	return status;
 }
 
 static void aio_completion_handler(sigval_t sigval)
 {
 	int old_errno = errno;
-
 	struct aiocb *cbp = sigval.sival_ptr;
 	int fd = cbp->aio_fildes;
 
@@ -131,5 +132,4 @@ next:
 		unix_error("aio_read");
 end:
 	errno = old_errno;
-	return;
 }
