@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 
@@ -32,15 +33,23 @@ static int open_server(int domain, int port)
 	return fd;
 }
 
+static void help(char const *path)
+{
+	fprintf(stderr, "usage: %s <port> [-eb]\n", path);
+	exit(1);
+}
+
 int main(int argc, char *argv[])
 {
 	int fd;
 	struct aiocb *cblist[2];
 
-	if (argc != 2) {
-		fprintf(stderr, "usage: %s <port>\n", argv[0]);
-		return 1;
-	}
+	if (argc == 2)
+		g_eb = 0;
+	else if (argc == 3 && strcmp(argv[2], "-eb") == 0)
+		g_eb = 1;
+	else
+		help(argv[0]);
 
 	/* set */
 	fd = open_server(AF_INET, atoi(argv[1]));
