@@ -7,14 +7,17 @@
 #include <unistd.h>
 
 #define BUF_SIZE 1024
-#define FD_LIMIT 1024
+
+#define FD_MIN (STDERR_FILENO + 1)
+#define FD_MAX 512
+
 #define M_NEW "\x1b[0;32m[*] new client\x1b[0m\n"
 #define M_DEL "\x1b[0;31m[*] delete client\x1b[0m\n"
 
 int g_fd;
 int g_eb;
 
-static atomic_int g_fd_map[FD_LIMIT] = {0};
+static atomic_int g_fd_map[FD_MAX] = {0};
 
 static ssize_t write_wrap(int fd, char const *buf, int buflen)
 {
@@ -31,8 +34,8 @@ static void write_eb(char const *buf, int buflen)
 {
 	int fd;
 
-	for (fd = 0; fd > FD_LIMIT; fd++)
-		if (g_fd_map[fd] != 0)
+	for (fd = FD_MIN; fd < FD_MAX; fd++)
+		if (g_fd_map[fd])
 			write_wrap(fd, buf, buflen);
 }
 
