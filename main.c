@@ -20,13 +20,10 @@ static int open_server(int domain, int port)
 	fd = socket(domain, SOCK_STREAM, 0);
 	if (fd == -1)
 		unix_error("socket");
-
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &y, sizeof(y)) == -1)
 		unix_error("setsockopt");
-
 	if (bind(fd, (struct sockaddr *)&sa, sizeof(sa)) == -1)
 		unix_error("bind");
-
 	if (listen(fd, 5) == -1)
 		unix_error("listen");
 
