@@ -74,50 +74,44 @@ static void aio_completion_handler(sigval_t sigval)
 
 		if (aio_read(ccbp) == -1)
 			unix_error("aio_read");
-
-		goto next;
-	}
-
-	char *buf = (void *)cbp->aio_buf;
-	int buflen = aio_return(cbp);
-
-	if (fd == STDIN_FILENO) {
-		// stdin
-		if (buflen == -1)
-			unix_error("aio_return");
-		else if (buflen == 0)
-			exit(0);
-
-		goto next;
-	}
-	else if (buflen > 0) {
-		// echo
-		buf[buflen] = '\0';
-
-		if (g_eb)
-			write_eb(buf, buflen);
-		else
-			write_wrap(fd, buf, buflen);
-		write_wrap(STDOUT_FILENO, buf, buflen);
-
-		goto next;
 	}
 	else {
-		// delete client
-		if (g_eb)
-			g_fd_map[fd] = 0;
+		char *buf = (void *)cbp->aio_buf;
+		int buflen = aio_return(cbp);
 
-		delete_client(fd);
-		delete_aiocb(cbp);
+		if (fd == STDIN_FILENO) {
+			// stdin
+			if (buflen == -1)
+				unix_error("aio_return");
+			else if (buflen == 0)
+				exit(0);
+		}
+		else if (buflen > 0) {
+			// echo
+			buf[buflen] = '\0';
 
-		goto end;
+			if (g_eb)
+				write_eb(buf, buflen);
+			else
+				write_wrap(fd, buf, buflen);
+			write_wrap(STDOUT_FILENO, buf, buflen);
+		}
+		else {
+			// delete client
+			if (g_eb)
+				g_fd_map[fd] = 0;
+
+			delete_client(fd);
+			delete_aiocb(cbp);
+
+			// no aio_read
+			return;
+		}
 	}
 
-next:
+	// next aio_read
 	if (aio_read(cbp) == -1)
 		unix_error("aio_read");
-end:
-	return;
 }
 
 struct aiocb *new_aiocb(int fd)
