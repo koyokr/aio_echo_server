@@ -9,7 +9,7 @@
 #define BUF_SIZE 1024
 
 #define FD_MIN (STDERR_FILENO + 1)
-#define FD_MAX 512
+#define FD_MAX 256
 
 #define M_NEW "\x1b[0;32m[*] new client\x1b[0m\n"
 #define M_DEL "\x1b[0;31m[*] delete client\x1b[0m\n"
@@ -57,7 +57,7 @@ static void delete_client(int fd)
 
 static void aio_completion_handler(sigval_t sigval)
 {
-	struct aiocb *cbp = sigval.sigval_ptr;
+	struct aiocb *cbp = sigval.sival_ptr;
 	int fd = cbp->aio_fildes;
 
 	if (fd == g_fd) {
@@ -78,7 +78,7 @@ static void aio_completion_handler(sigval_t sigval)
 			// stdin
 			if (buflen == -1)
 				unix_error("aio_return");
-			if (buflen == 0)
+			else if (buflen == 0)
 				exit(0);
 		}
 		else if (buflen > 0) {
