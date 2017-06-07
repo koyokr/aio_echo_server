@@ -21,12 +21,10 @@ static atomic_int g_fd_map[FD_MAX] = {0};
 
 static ssize_t write_wrap(int fd, char const *buf, int buflen)
 {
-	ssize_t len;
+	ssize_t len = write(fd, buf, buflen);
 
-	len = write(fd, buf, buflen);
 	if (len == -1)
 		unix_error("write");
-
 	return len;
 }
 
@@ -43,13 +41,11 @@ static int new_client(int fd)
 {
 	struct sockaddr_in sa;
 	socklen_t slen;
-	int cfd;
+	int cfd = accept(fd, (struct sockaddr *)&sa, &slen);
 
-	cfd = accept(fd, (struct sockaddr *)&sa, &slen);
 	if (cfd == -1)
 		unix_error("accept");
 	write_wrap(STDOUT_FILENO, M_NEW, sizeof(M_NEW));
-
 	return cfd;
 }
 
@@ -61,7 +57,7 @@ static void delete_client(int fd)
 
 static void aio_completion_handler(sigval_t sigval)
 {
-	struct aiocb *cbp = sigval.sival_ptr;
+	struct aiocb *cbp = sigval.sigval_ptr;
 	int fd = cbp->aio_fildes;
 
 	if (fd == g_fd) {
@@ -76,18 +72,19 @@ static void aio_completion_handler(sigval_t sigval)
 			unix_error("aio_read");
 	}
 	else {
-		char *buf = (void *)cbp->aio_buf;
 		int buflen = aio_return(cbp);
 
 		if (fd == STDIN_FILENO) {
 			// stdin
 			if (buflen == -1)
 				unix_error("aio_return");
-			else if (buflen == 0)
+			if (buflen == 0)
 				exit(0);
 		}
 		else if (buflen > 0) {
 			// echo
+			char *buf = (void *)cbp->aio_buf;
+
 			buf[buflen] = '\0';
 
 			if (g_eb)
