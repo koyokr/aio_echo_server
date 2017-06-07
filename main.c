@@ -9,15 +9,14 @@
 
 static int open_server(int domain, int port)
 {
-	int fd;
 	int y = 1;
 	struct sockaddr_in sa = {
 		.sin_family      = domain,
 		.sin_port        = htons(port),
 		.sin_addr.s_addr = htonl(INADDR_ANY)
 	};
+	int fd = socket(domain, SOCK_STREAM, 0);
 
-	fd = socket(domain, SOCK_STREAM, 0);
 	if (fd == -1)
 		unix_error("socket");
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &y, sizeof(y)) == -1)
